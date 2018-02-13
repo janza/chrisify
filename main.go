@@ -44,9 +44,11 @@ func main() {
 
 	finder := facefinder.NewFinder(*haarCascade)
 
-	baseImage := loadImage(file)
+	baseImage, faces, err := finder.Detect(file)
 
-	faces := finder.Detect(baseImage)
+	if err != nil {
+		panic(err)
+	}
 
 	bounds := baseImage.Bounds()
 
@@ -59,7 +61,7 @@ func main() {
 		if newFace == nil {
 			panic("nil face")
 		}
-		chrisFace := imaging.Fit(newFace, rect.Dx(), rect.Dy(), imaging.Lanczos)
+		chrisFace := imaging.Resize(newFace, rect.Dx(), rect.Dy(), imaging.Lanczos)
 
 		draw.Draw(
 			canvas,
@@ -77,15 +79,15 @@ func main() {
 			0,
 			imaging.Lanczos,
 		)
-		face_bounds := face.Bounds()
+		faceBounds := face.Bounds()
 		draw.Draw(
 			canvas,
 			bounds,
 			face,
-			bounds.Min.Add(image.Pt(-bounds.Max.X/2+face_bounds.Max.X/2, -bounds.Max.Y+int(float64(face_bounds.Max.Y)/1.9))),
+			bounds.Min.Add(image.Pt(-bounds.Max.X/2+faceBounds.Max.X/2, -bounds.Max.Y+int(float64(faceBounds.Max.Y)/1.9))),
 			draw.Over,
 		)
 	}
 
-	jpeg.Encode(os.Stdout, canvas, &jpeg.Options{jpeg.DefaultQuality})
+	jpeg.Encode(os.Stdout, canvas, &jpeg.Options{Quality: jpeg.DefaultQuality})
 }

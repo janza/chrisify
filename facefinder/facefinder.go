@@ -1,33 +1,45 @@
 package facefinder
 
 import (
+	"bytes"
 	"image"
 
-	"github.com/lazywei/go-opencv/opencv"
+	"gocv.io/x/gocv"
 )
 
-var faceCascade *opencv.HaarCascade
+// var faceCascade *opencv.HaarCascade
 
 type Finder struct {
-	cascade *opencv.HaarCascade
+	classifier *gocv.CascadeClassifier
 }
 
 func NewFinder(xml string) *Finder {
+	classifier := gocv.NewCascadeClassifier()
+	classifier.Load(xml)
 	return &Finder{
-		cascade: opencv.LoadHaarClassifierCascade(xml),
+		classifier: &classifier,
 	}
 }
 
-func (f *Finder) Detect(i image.Image) []image.Rectangle {
-	var output []image.Rectangle
+func (f *Finder) Detect(imagePath string) (image.Image, []image.Rectangle, error) {
 
-	faces := f.cascade.DetectObjects(opencv.FromImage(i))
-	for _, face := range faces {
-		output = append(output, image.Rectangle{
-			image.Point{face.X(), face.Y()},
-			image.Point{face.X() + face.Width(), face.Y() + face.Height()},
-		})
+	readImage := gocv.IMRead(imagePath, gocv.IMReadColor)
+
+	faces := f.classifier.DetectMultiScale(readImage)
+
+	encodedImg, err := gocv.IMEncode(".jpg", readImage)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	return output
+	image, _, err := image.Decode(bytes.NewReader(encodedImg))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return image, faces, nil
+}
+
+func (f *Finder) Close() error {
+	return f.classifier.Close()
 }
